@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+echo " <**** Put Object ****>"
+
+# Check for bucket name
+if [ -z "$1" ]; then
+    echo "There needs to be a bucket name eg. ./bucket my-bucket-name"
+    exit 1
+fi
+
+# Check for filename prefix
+if [ -z "$2" ]; then
+    echo "There needs to be a filename prefix eg. .txt"
+    exit 1
+fi
+
+BUCKET_NAME=$1
+FILENAME=$2
+OBJECT_KEY=$(basename "$FILENAME")
+
+# Attempt to put the object in the S3 bucket
+PUT_RESULT=$(aws s3api put-object \
+    --bucket "$BUCKET_NAME" \
+    --body "$FILENAME" \
+    --key "$OBJECT_KEY")
+
+# Get the file size in bytes
+FILE_SIZE=$(stat -c%s "$FILENAME")
+
+# Display the result in a formatted table
+echo "The following object has been uploaded to bucket '$BUCKET_NAME':"
+echo "-------------------------------------------------------------"
+echo "|                        PutObject                          |"
+echo "+-------------+-----------------------+---------+-----------+"
+echo "|   Bucket    |         Key           | Status  | File Size |"
+echo "+-------------+-----------------------+---------+-----------+"
+printf "| %-11s | %-21s | %-7s | %-9d |\n" "$BUCKET_NAME" "$OBJECT_KEY" "Uploaded" "$FILE_SIZE"
+echo "+-------------+-----------------------+---------+-----------+"

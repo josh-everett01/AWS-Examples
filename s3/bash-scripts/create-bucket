@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+echo "<**** Create Bucket ****>"
+
+# Check for bucket name
+if [ -z "$1" ]; then
+    echo "There needs to be a bucket name eg. ./bucket my-bucket-name"
+    exit 1
+fi
+
+BUCKET_NAME=$1
+REGION=${2:-us-east-2} # Default to us-east-2 if no region is specified
+
+# Attempt to create the bucket and capture the location
+LOCATION=$(aws s3api create-bucket \
+    --bucket "$BUCKET_NAME" \
+    --create-bucket-configuration LocationConstraint="$REGION" \
+    --region "$REGION" \
+    --query Location \
+    --output text)
+
+# Display the results in a formatted table
+echo "The following bucket has been created:"
+echo "---------------------------------------------------"
+echo "|       Bucket Name       |     Region     |     Location     |"
+echo "+-------------------------+----------------+-------------------+"
+printf "| %-23s | %-14s | %-17s |\n" "$BUCKET_NAME" "$REGION" "$LOCATION"
+echo "+-------------------------+----------------+-------------------+"

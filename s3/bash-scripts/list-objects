@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+
+echo "<**** List Objects ****>"
+
+# Check for bucket name argument
+if [ -z "$1" ]; then
+    # If no bucket name is provided, display an error message and exit
+    echo "There needs to be a bucket name, e.g., ./bucket my-bucket-name"
+    exit 1
+fi
+
+# Assign bucket name from the first argument
+BUCKET_NAME=$1
+# Set the region; default to 'us-east-2' if no region is provided as the second argument
+REGION=${2:-us-east-2}
+
+# Retrieve the Contents field of the bucket
+CONTENTS=$(aws s3api list-objects-v2 \
+    --bucket "$BUCKET_NAME" \
+    --region "$REGION" \
+    --query 'Contents' \
+    --output json)
+
+# Check if Contents is empty or null
+if [ "$CONTENTS" == "null" ] || [ "$CONTENTS" == "[]" ]; then
+    # Display a message if the bucket is empty, in a table format
+    echo "The bucket '$BUCKET_NAME' is empty."
+    echo "-----------------------------------------"
+    echo "|                Empty                  |"
+    echo "-----------------------------------------"
+else
+    # Count the number of objects in the specified bucket
+    OBJECT_COUNT=$(echo "$CONTENTS" | jq 'length')
+    
+    # Display the object count and list the objects in a formatted table if the bucket has content
+    echo "The bucket '$BUCKET_NAME' contains $OBJECT_COUNT object(s):"
+    echo "-----------------------------------------------------"
+    echo "|                   ListObjectsV2                   |"
+    echo "+-------------+-----------------------------+-------+"
+    echo "|     Key     |        LastModified         | Size  |"
+    echo "+-------------+-----------------------------+-------+"
+
+    # Process each object to extract Key, LastModified, and Size, then format it as a table
+    echo "$CONTENTS" | jq -r '.[] | [.Key, .LastModified, (.Size | tostring)] | @tsv' | \
+    while IFS=$'\t' read -r key last_modified size; do
+        printf "| %-11s | %-27s | %-5s |\n" "$key" "$last_modified" "$size"
+    done
+
+    echo "+-------------+-----------------------------+-------+"
+fi

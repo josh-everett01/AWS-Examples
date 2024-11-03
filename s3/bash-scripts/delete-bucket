@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+echo "<**** Delete Bucket ****>"
+
+# Check for bucket name
+if [ -z "$1" ]; then
+    echo "There needs to be a bucket name eg. ./bucket my-bucket-name"
+    exit 1
+fi
+
+BUCKET_NAME=$1
+REGION=${2:-us-east-2} # Default to us-east-2 if no region is specified
+
+# Delete the bucket
+aws s3api delete-bucket \
+    --bucket "$BUCKET_NAME" \
+    --region "$REGION"
+
+# Display the results in a formatted table
+echo "The following bucket has been deleted:"
+echo "---------------------------------------------------"
+echo "|       Bucket Name       |     Region     |    Status    |"
+echo "+-------------------------+----------------+--------------+"
+printf "| %-23s | %-14s | %-12s |\n" "$BUCKET_NAME" "$REGION" "Deleted"
+echo "+-------------------------+----------------+--------------+"

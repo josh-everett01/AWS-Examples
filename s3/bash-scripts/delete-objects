@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+echo "<**** Delete Objects ****>"
+
+# Exit immediately if any command returns a non-zero status
+set -e
+
+# Check for bucket name
+if [ -z "$1" ]; then
+    echo "There needs to be a bucket name eg. ./bucket my-bucket-name"
+    exit 1
+fi
+
+BUCKET_NAME=$1
+
+# Retrieve the list of objects in the bucket
+OBJECTS=$(aws s3api list-objects-v2 \
+    --bucket "$BUCKET_NAME" \
+    --query 'Contents[].Key' \
+    --output json)
+
+# Check if there are any objects in the bucket
+if [ "$OBJECTS" == "null" ] || [ "$OBJECTS" == "[]" ]; then
+    echo "The bucket '$BUCKET_NAME' is already empty."
+    echo "-----------------------------------------"
+    echo "|                Empty                  |"
+    echo "-----------------------------------------"
+else
+    # Create a JSON file with the objects to delete
+    echo "$OBJECTS" | jq -n '{Objects: [inputs | .[] | {Key: .}]}' > /tmp/delete_objects.json
+
+    # Display the objects to be deleted in a formatted table
+    echo "The following objects will be deleted from bucket '$BUCKET_NAME':"
+    echo "-----------------------------------------------------"
+    echo "|                   DeleteObjects                    |"
+    echo "+-------------+-------------------------------------+"
+    echo "|     Key     |          Status                    |"
+    echo "+-------------+-------------------------------------+"
+    
+    # Read the keys from the JSON file and display them in a table format
+    jq -r '.Objects[].Key' /tmp/delete_objects.json | \
+    while read -r key; do
+        printf "| %-11s | %-35s |\n" "$key" "Pending"
+    done
+    
+    echo "+-------------+-------------------------------------+"
+
+    # Perform the deletion
+    DELETE_RESULT=$(aws s3api delete-objects --bucket "$BUCKET_NAME" --delete file:///tmp/delete_objects.json)
+
+    # Display the deletion results in the same table format
+    echo "The following objects have been deleted:"
+    echo "-----------------------------------------------------"
+    echo "|                   DeleteObjects                    |"
+    echo "+-------------+-------------------------------------+"
+    echo "|     Key     |          Status                    |"
+    echo "+-------------+-------------------------------------+"
+
+    # Parse the deletion response to show successful deletions
+    echo "$DELETE_RESULT" | jq -r '.Deleted[] | [.Key, "Deleted"] | @tsv' | \
+    while IFS=$'\t' read -r key status; do
+        printf "| %-11s | %-35s |\n" "$key" "$status"
+    done
+
+    echo "+-------------+-------------------------------------+"
+fi

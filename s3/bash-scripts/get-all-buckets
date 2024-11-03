@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+echo "<**** List of Buckets ****>"
+
+ # Store the result of the list-buckets call in a variable
+ BUCKET_DATA=$(aws s3api list-buckets)
+
+# Parse the stored data to display the buckets in a formatted table
+echo "$BUCKET_DATA" | jq -r '.Buckets | sort_by(.CreationDate) | reverse | .[] | [.CreationDate, .Name] | @tsv' | column -t -s $'\t'
+
+# Count the number of buckets and display it
+BUCKET_COUNT=$(echo "$BUCKET_DATA" | jq '.Buckets | length')
+echo -e "\nNumber of Buckets: $BUCKET_COUNT"

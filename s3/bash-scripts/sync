@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+echo " <**** SYNC ****>"
+
+# Exit immediately if any command returns a non-zero status
+set -e
+
+# Check for bucket name
+if [ -z "$1" ]; then
+    echo "There needs to be a bucket name eg. ./bucket my-bucket-name"
+    exit 1
+fi
+
+# Check for filename prefix
+if [ -z "$2" ]; then
+    echo "There needs to be a filename prefix eg. .txt"
+    exit 1
+fi
+
+BUCKET_NAME=$1
+FILENAME_PREFIX=$2
+
+# Where files will be stored
+OUTPUT_DIR="/tmp/s3-bash-scripts"
+
+# Remove folder if it already exists
+if [ -d "$OUTPUT_DIR" ]; then
+    rm -r $OUTPUT_DIR
+fi
+
+# Create output folder
+mkdir -p $OUTPUT_DIR
+
+# Generate a random number to determine how many files to create
+NUM_FILES=$((RANDOM % 6 + 5))
+
+# Track created files for formatted output
+echo "The following files have been created in '$OUTPUT_DIR':"
+echo "-----------------------------------------------------"
+echo "|       File Name       |        Size (Bytes)       |"
+echo "+-----------------------+---------------------------+"
+
+for ((i=1; i<=NUM_FILES; i++)); do
+    # Generate a random filename
+    RANDOM_FILENAME="$OUTPUT_DIR/${FILENAME_PREFIX}_$i.txt"
+    
+    # Generate random data and write it to the file
+    dd if=/dev/urandom of="$RANDOM_FILENAME" bs=1024 count=$((RANDOM % 10 + 1)) 2>/dev/null
+
+    # Get file size
+    FILE_SIZE=$(stat -c%s "$RANDOM_FILENAME")
+
+    # Print each file info in a formatted row
+    printf "| %-21s | %-25s |\n" "$(basename "$RANDOM_FILENAME")" "$FILE_SIZE"
+done
+
+echo "+-----------------------+---------------------------+"
+
+# Sync files to the S3 bucket
+SYNC_RESULT=$(aws s3 sync "$OUTPUT_DIR" "s3://$BUCKET_NAME/files")
+
+# Display sync results in a formatted table
+echo "The following files have been uploaded to 's3://$BUCKET_NAME/files':"
+echo "------------------------------------------------------------"
+echo "|        File Name        |             Status             |"
+echo "+-------------------------+--------------------------------+"
+
+# Capture and format each upload result
+echo "$SYNC_RESULT" | grep 'upload:' | while read -r line; do
+    FILE_NAME=$(echo "$line" | sed -n 's/.*upload: \(.*\) to.*/\1/p' | xargs basename)
+    printf "| %-23s | %-30s |\n" "$FILE_NAME" "Uploaded"
+done
+
+echo "+-------------------------+--------------------------------+"
