@@ -1,6 +1,10 @@
 tasks:
   - name: terraform
     before: |
+      while sudo lsof /var/lib/apt/lists/lock; do
+        echo "Waiting for apt-get lock to be released..."
+        sleep 5
+      done
       sudo apt-get update
       sudo apt-get install -y gnupg software-properties-common
       wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor | sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg
@@ -11,9 +15,18 @@ tasks:
 
   - name: utils
     before: |
-      sudo apt-get install tree
+      while sudo lsof /var/lib/apt/lists/lock; do
+        echo "Waiting for apt-get lock to be released..."
+        sleep 5
+      done
+      sudo apt-get install -y tree
+
   - name: powershell
     before: |
+      while sudo lsof /var/lib/apt/lists/lock; do
+        echo "Waiting for apt-get lock to be released..."
+        sleep 5
+      done
       sudo apt-get update
       sudo apt-get install -y wget apt-transport-https software-properties-common
       source /etc/os-release
@@ -22,9 +35,8 @@ tasks:
       rm packages-microsoft-prod.deb
       sudo apt-get update
       sudo apt-get install -y powershell
-      # pwsh
+      pwsh
       
-
   - name: aws-cli
     env:
       AWS_CLI_AUTO_PROMPT: on-partial
