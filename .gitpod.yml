@@ -1,4 +1,7 @@
 tasks:
+  - name: cdk
+    before:
+      npm i -g aws-cdk
   - name: terraform
     before: |
       while sudo lsof /var/lib/apt/lists/lock; do
